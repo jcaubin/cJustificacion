@@ -1,2 +1,2 @@
 # cJustificacion
-Cliente de los ws de justificacion
+Cliente de los ws de justificación.
