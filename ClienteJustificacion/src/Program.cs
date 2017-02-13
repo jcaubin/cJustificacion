@@ -8,6 +8,7 @@ using CsvHelper;
 using PowerArgs;
 using System.IO;
 using Aeseg.ProxyJustificacion;
+using CsvHelper.Configuration;
 
 namespace ClienteJustificacion
 {
@@ -34,14 +35,13 @@ namespace ClienteJustificacion
                         ProcessJbs(clientArgs);
                         break;
                     case JustificacionFileType.Viajes:
-                        throw new NotImplementedException();
+                        ProcessJviajes(clientArgs);
                         break;
                     case JustificacionFileType.Personal:
-                        throw new NotImplementedException();
+                        ProcessJpersonal(clientArgs);
                         break;
                     default:
                         throw new NotImplementedException();
-                        break;
                 }
             }
             catch (ArgException ex)
@@ -59,7 +59,19 @@ namespace ClienteJustificacion
 
         static void ProcessJbs(ClientArgs clientArgs)
         {
-            var records = LoadCsv<JbsInterchageModel>(clientArgs.File);
+            var records = LoadCsv<JbsInterchageModel, JbsInterchageModelCsvDocMap>(clientArgs.File);
+            var result = SendRecords(records.Cast<JInterchageModel>().ToList());
+        }
+
+        static void ProcessJviajes(ClientArgs clientArgs)
+        {
+            var records = LoadCsv<JviajeInterchageModel, JviajesInterchageModelCsvMap>(clientArgs.File);
+            var result = SendRecords(records.Cast<JInterchageModel>().ToList());
+        }
+
+        static void ProcessJpersonal(ClientArgs clientArgs)
+        {
+            var records = LoadCsv<JpersonalInterchageModel, JpersonalInterchageModelCsvMap>(clientArgs.File);
             var result = SendRecords(records.Cast<JInterchageModel>().ToList());
         }
 
@@ -69,13 +81,13 @@ namespace ClienteJustificacion
         /// <typeparam name="T"></typeparam>
         /// <param name="path"></param>
         /// <returns></returns>
-        static List<T> LoadCsv<T>(string path) where T : JInterchageModel
+        static List<T> LoadCsv<T, U>(string path) where T : JInterchageModel where U : CsvClassMap
         {
             //Carga y parseo del fichero de datos jbs
             var parseErrors = new List<ParseResult>(); //Listado de errores de parseo
             var csv = new CsvReader(new StreamReader(path));
             csv.Configuration.Delimiter = ";";
-            csv.Configuration.RegisterClassMap<JbsInterchageModelCsvDocMap>();
+            csv.Configuration.RegisterClassMap<U>();
             csv.Configuration.IgnoreReadingExceptions = true;
             csv.Configuration.ReadingExceptionCallback = (ex, row) =>
             {

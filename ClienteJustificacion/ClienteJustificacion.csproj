@@ -60,6 +60,8 @@
     <Compile Include="src\ClientArgs.cs" />
     <Compile Include="src\FileTypeConverter.cs" />
     <Compile Include="src\JbsInterchageModelCsvDocMap.cs" />
+    <Compile Include="src\JpersonalInterchageModelCsvMap.cs" />
+    <Compile Include="src\JviajesInterchageModelCsvMap.cs" />
     <Compile Include="src\ParseResult.cs" />
     <Compile Include="src\Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
