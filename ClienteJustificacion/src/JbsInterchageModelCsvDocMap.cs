@@ -22,6 +22,10 @@ namespace ClienteJustificacion
             Map(m => m.ImporteTotal).Name("IMPORTE_TOTAL");
             Map(m => m.ImporteImputado).Name("IMPORTE_IMPUTADO");
             Map(m => m.FechaPago).Name("FECHA_PAGO");
+            Map(m => m.Anualidad).Name("ANUALIDAD");
+            Map(m => m.Observaciones).Name("OBSERVACIONES");
+            Map(m => m.NombreFichero).Name("DOC").TypeConverter<FileTypeConverter>();
+
             Map(m => m.NumeroFactura).Name("NUMERO_FACTURA");
             Map(m => m.NIF).Name("NIF");
             Map(m => m.NombreProveedor).Name("NOMBRE");
@@ -29,10 +33,6 @@ namespace ClienteJustificacion
             Map(m => m.FechaFactura).Name("FECHA_JUST");
             Map(m => m.BaseImponible).Name("BASE_IMP");
             Map(m => m.TipoImpositivo).Name("TIPO_IMP");
-            Map(m => m.Anualidad).Name("ANUALIDAD");
-            Map(m => m.Observaciones).Name("OBSERVACIONES");
-
-            Map(m => m.NombreFichero).Name("DOC").TypeConverter<FileTypeConverter>();
         }
     }
 }

@@ -82,6 +82,9 @@
     <Content Include="csv\BIENES_SERV_pi14.csv">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <None Include="csv\BIENES_SERV_.csv" />
+    <None Include="csv\PERSONAL_.csv" />
+    <None Include="csv\VIAJES_.csv" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
