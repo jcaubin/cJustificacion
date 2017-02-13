@@ -15,6 +15,8 @@ namespace ClienteJustificacion
     {
         private static Random random = new Random();
         private static Logger _loger = LogManager.GetCurrentClassLogger();
+        private static string user;
+        private static string password;
 
         static void Main(string[] args)
         {
@@ -23,6 +25,8 @@ namespace ClienteJustificacion
                 var clientArgs = Args.Parse<ClientArgs>(args);
                 Console.WriteLine("Proceso del fichero: {0}; {1}; {2}; {3};", clientArgs.User, "*****", clientArgs.FileType, clientArgs.File);
                 _loger.Info("Proceso del fichero: {0}; {1}; {2}; {3};", clientArgs.User, "*****", clientArgs.FileType, clientArgs.File);
+                user = clientArgs.User;
+                password = clientArgs.Password;
 
                 switch (clientArgs.FileType)
                 {
@@ -55,9 +59,21 @@ namespace ClienteJustificacion
 
         static void ProcessJbs(ClientArgs clientArgs)
         {
+            var records = LoadCsv<JbsInterchageModel>(clientArgs.File);
+            var result = SendRecords(records.Cast<JInterchageModel>().ToList());
+        }
+
+        /// <summary>
+        /// Procesa el fichero CSV de entrada
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="path"></param>
+        /// <returns></returns>
+        static List<T> LoadCsv<T>(string path) where T : JInterchageModel
+        {
             //Carga y parseo del fichero de datos jbs
             var parseErrors = new List<ParseResult>(); //Listado de errores de parseo
-            var csv = new CsvReader(new StreamReader(clientArgs.File));
+            var csv = new CsvReader(new StreamReader(path));
             csv.Configuration.Delimiter = ";";
             csv.Configuration.RegisterClassMap<JbsInterchageModelCsvDocMap>();
             csv.Configuration.IgnoreReadingExceptions = true;
@@ -67,7 +83,7 @@ namespace ClienteJustificacion
                 string message = ex.Message + " " + ex.Data["CsvHelper"];
                 parseErrors.Add(new ParseResult() { Id = rownumber, Descripcion = message });
             };
-            var records = csv.GetRecords<JbsInterchageModel>().ToList();
+            var records = csv.GetRecords<T>().ToList();
 
             if (parseErrors.Count > 0)
             {
@@ -78,36 +94,71 @@ namespace ClienteJustificacion
                     Console.WriteLine("Linea: {0}; Error {1};", error.Id, error.Descripcion);
                     _loger.Error("Linea: {0}; Error {1};", error.Id, error.Descripcion);
                 }
-                return;
+                throw new ArgumentException("Formato del fichero de entrada no valido.");
             }
+            return records;
+        }
+
+        /// <summary>
+        /// Envio de datos al WS
+        /// </summary>
+        /// <param name="records"></param>
+        /// <returns></returns>
+        static List<LoadResult> SendRecords(List<JInterchageModel> records)
+        {
+            var resultadosEnvio = new List<LoadResult>();
 
             using (JustificationClient client = new JustificationClient())
             {
-                client.ClientCredentials.UserName.UserName = clientArgs.User;
-                client.ClientCredentials.UserName.Password = clientArgs.Password;
-                var resultadosEnvio = new List<LoadResult>();
-                foreach (var item in records)
+                client.ClientCredentials.UserName.UserName = user;
+                client.ClientCredentials.UserName.Password = password;
+                foreach (var item in records.Select((value, i) => new { i, value }))
                 {
-                    Console.Write("Envio: {0}, {1}.", item.Expediente, item.NumeroFactura);
-                    if (!string.IsNullOrWhiteSpace(item.NombreFichero))
+                    Console.Write("Envio: {0}, {1}.", item.i, item.value.Expediente);
+                    if (!string.IsNullOrWhiteSpace(item.value.NombreFichero))
                     {
-                        item.Fichero = File.ReadAllBytes(item.NombreFichero);
-                        item.NombreFichero = Path.GetFileName(item.NombreFichero);
+                        item.value.Fichero = File.ReadAllBytes(item.value.NombreFichero);
+                        item.value.NombreFichero = Path.GetFileName(item.value.NombreFichero);
                     }
-                    LoadResult r = client.LoadJbs(item);
-                    resultadosEnvio.Add(r);
+
+                    LoadResult r;
+                    if (item.value is JbsInterchageModel)
+                    {
+                        var j = (JbsInterchageModel)item.value;
+                        r = client.LoadJbs(j);
+                        resultadosEnvio.Add(r);
+                    }
+                    else if (item.value is JpersonalInterchageModel)
+                    {
+                        var j = (JpersonalInterchageModel)item.value;
+                        r = client.LoadJpersonal(j);
+                        resultadosEnvio.Add(r);
+                    }
+                    else if (item.value is JviajeInterchageModel)
+                    {
+                        var j = (JviajeInterchageModel)item.value;
+                        r = client.LoadJviajes(j);
+                        resultadosEnvio.Add(r);
+                    }
+                    else
+                    {
+                        throw new ArgumentException("Tipo de datos incorrecto.");
+                    }
                     Console.WriteLine(" Resultado: {0};", r.ResultadoCarga);
-                    _loger.Info("Envio: {0}, {1}. Resultado {2}", item.Expediente, item.NumeroFactura, r.ResultadoCarga);
+                    _loger.Info("Envio: {0}, {1}. Resultado {2}", item.i, item.value.Expediente, r.ResultadoCarga);
                     if (r.ResultadoCarga == ResultadoCarga.Erroneo)
                     {
                         foreach (var error in r.Errores)
                         {
-                            _loger.Warn("Envio: {0}, {1}. Error {2} - {3}", item.Expediente, item.NumeroFactura, error.Nombre, error.Descripcion);
+                            _loger.Warn("Envio: {0}, {1}. Error {2} - {3}", item.i, item.value.Expediente, error.Nombre, error.Descripcion);
                         }
                     }
                 }
             }
+
+            return resultadosEnvio;
         }
+
     }
 
 }
